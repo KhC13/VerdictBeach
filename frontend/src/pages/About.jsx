@@ -12,7 +12,7 @@ export default function About() {
       <PageHero
         eyebrow="About us"
         title={<>Built to bring <em className="text-gold">institutional-grade legal clarity</em> to high-growth ventures.</>}
-        text="Established in [Founding Year] as the dedicated legal practice of Belvo Ventures Group, Verdict Beach was built to bring structured legal support to founders and businesses without traditional law firm friction."
+        text="Established as the dedicated legal practice of Belvo Ventures Group, Verdict Beach was built to bring structured legal support to founders and businesses without traditional law firm friction."
       />
 
       {/* Introduction + positioning */}

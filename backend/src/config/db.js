@@ -8,8 +8,13 @@ export async function connectDB() {
     return;
   }
 
+  const uri = env.MONGODB_URI || process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error('MONGODB_URI is missing');
+  }
+
   try {
-    const conn = await mongoose.connect(env.MONGODB_URI, {
+    const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
     });
 
@@ -17,7 +22,6 @@ export async function connectDB() {
     console.log(`[Database] MongoDB connected successfully: ${conn.connection.host}/${conn.connection.name}`);
   } catch (error) {
     console.error(`[Database] MongoDB connection failed: ${error.message}`);
-    // In development, log the error rather than immediately crashing so that developer can troubleshoot
     if (env.isProduction) {
       process.exit(1);
     }

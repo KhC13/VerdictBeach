@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
@@ -14,7 +15,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Security HTTP headers (crossOriginResourcePolicy cross-origin allows static assets to be fetched by frontend)
+// Security HTTP headers
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
@@ -54,6 +55,16 @@ app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting (protect auth endpoints from brute force)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, statusCode: 429, message: 'Too many attempts. Please try again later.' },
+});
+app.use('/api/auth/login', loginLimiter);
 
 // Trust proxy for secure cookies / IP detection behind proxies
 app.set('trust proxy', 1);
