@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
+import { useRef, useState, useEffect } from 'react';
+import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
 import Button from './Button';
 import ArchitectureArt from './ArchitectureArt';
 import { ease } from './AnimatedSection';
@@ -16,16 +16,55 @@ const headline = [
   { t: 'scaling', em: true },
   { t: 'businesses.' },
 ];
-
+const heroImages = [
+  '/images/backgrounds/03_legal_office_lady_justice.jpg',
+  '/images/backgrounds/Cinematic Executive Law Office at Dusk.png',
+  '/images/backgrounds/Luxury Law Office Skyline Interior.png',
+];
 export default function HeroSection() {
   const ref = useRef(null);
+  const [activeImage, setActiveImage] = useState(0);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setActiveImage((current) => (current + 1) % heroImages.length);
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, []);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
   const artY = useTransform(scrollYProgress, [0, 1], [0, 90]);
   const glowY = useTransform(scrollYProgress, [0, 1], [0, -80]);
 
   return (
-    <section ref={ref} className="grain relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-navy pb-12 pt-32 sm:pt-36">
-      {/* Background: slow-moving glows + architectural grid lines */}
+    <section
+  ref={ref}
+  className="grain relative isolate flex min-h-[100svh] flex-col justify-center overflow-hidden bg-navy pb-12 pt-32 sm:pt-36"
+>
+  {/* Animated background images */}
+  <AnimatePresence mode="sync">
+    <motion.div
+      key={activeImage}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
+      style={{
+        backgroundImage: `url('${heroImages[activeImage]}')`,
+      }}
+      initial={{ opacity: 0, scale: 1.04 }}
+      animate={{ opacity: 1, scale: 1.10 }}
+      exit={{ opacity: 0 }}
+      transition={{
+        opacity: { duration: 1.5 },
+        scale: { duration: 5, ease: 'linear' },
+      }}
+    />
+  </AnimatePresence>
+
+  {/* Navy overlay — no image blur */}
+  <div
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-0 z-[1] bg-navy/55"
+  />
       <motion.div style={{ y: glowY }} aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="absolute -right-40 -top-40 h-[520px] w-[520px] animate-drift rounded-full bg-gold/[0.12] blur-3xl" />
         <div className="absolute -bottom-52 -left-40 h-[460px] w-[460px] animate-drift rounded-full bg-[#2a4570]/40 blur-3xl [animation-delay:-7s]" />
