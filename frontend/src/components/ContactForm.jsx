@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertCircle, CheckCircle2, ChevronDown, Loader2, Send } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ChevronDown, Loader2, Paperclip, Send, X } from 'lucide-react';
+
+
 import { serviceOptions, services } from '../data/content';
 import { submitEnquiry } from '../lib/submitEnquiry';
 import { ease } from './AnimatedSection';
@@ -61,6 +63,9 @@ export default function ContactForm() {
   const [values, setValues] = useState(empty);
   const [touched, setTouched] = useState({});
   const [status, setStatus] = useState('idle'); // idle | loading | success | error
+  const [files, setFiles] = useState([]);
+  const [fileError, setFileError] = useState('');
+  const fileInputRef = useRef(null);
   const [result, setResult] = useState(null);
   const formRef = useRef(null);
 
@@ -83,6 +88,26 @@ export default function ContactForm() {
     disabled: status === 'loading',
   });
 
+  const handleFileChange = (e) => {
+    const selected = Array.from(e.target.files || []);
+    if (selected.length + files.length > 5) {
+      setFileError('You can attach a maximum of 5 files.');
+      return;
+    }
+    const oversized = selected.find((f) => f.size > 10 * 1024 * 1024);
+    if (oversized) {
+      setFileError(`File "${oversized.name}" exceeds the 10MB limit.`);
+      return;
+    }
+    setFileError('');
+    setFiles((prev) => [...prev, ...selected]);
+  };
+
+  const removeFile = (index) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   async function onSubmit(e) {
     e.preventDefault();
     setTouched({ name: true, email: true, phone: true, role: true, service: true, message: true });
@@ -93,7 +118,7 @@ export default function ContactForm() {
     }
     setStatus('loading');
     try {
-      setResult(await submitEnquiry(values));
+      setResult(await submitEnquiry({ ...values, files }));
       setStatus('success');
     } catch {
       setStatus('error');
@@ -102,9 +127,13 @@ export default function ContactForm() {
 
   function reset() {
     setValues(empty);
+    setFiles([]);
+    setFileError('');
     setTouched({});
     setStatus('idle');
+    if (fileInputRef.current) fileInputRef.current.value = '';
   }
+
 
   return (
     <div className="relative">
@@ -193,7 +222,63 @@ export default function ContactForm() {
               </Field>
             </div>
 
+            <div className="sm:col-span-2">
+              <label className="mb-2 block text-sm font-medium text-navy">
+                Attach agreements or draft documents <span className="text-xs font-normal text-charcoal/60">(optional, PDF, DOCX, TXT, images up to 10MB)</span>
+              </label>
+              <div className="rounded-xl border border-dashed border-navy/20 bg-cream/30 p-4 transition-colors hover:border-gold">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <label
+                    htmlFor="file-upload"
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-navy/5 px-4 py-2 text-sm font-medium text-navy hover:bg-navy/10 transition-colors"
+                  >
+                    <Paperclip size={16} className="text-gold-600" />
+                    <span>Choose files ({files.length}/5)</span>
+                    <input
+                      id="file-upload"
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt,.rtf,.jpg,.jpeg,.png"
+                      onChange={handleFileChange}
+                      className="sr-only"
+                      disabled={status === 'loading'}
+                    />
+                  </label>
+                  <span className="text-xs text-charcoal/60">Max 5 files, 10MB each</span>
+                </div>
+
+                {fileError && (
+                  <p className="mt-2 text-xs text-red-800 flex items-center gap-1">
+                    <AlertCircle size={12} /> {fileError}
+                  </p>
+                )}
+
+                {files.length > 0 && (
+                  <ul className="mt-3 space-y-1.5 border-t border-navy/10 pt-2.5">
+                    {files.map((file, idx) => (
+                      <li key={`${file.name}-${idx}`} className="flex items-center justify-between text-xs text-charcoal bg-white/80 rounded-md px-3 py-1.5 border border-navy/10">
+                        <span className="truncate max-w-[280px] sm:max-w-md font-mono">{file.name}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-charcoal/50">{(file.size / 1024).toFixed(0)} KB</span>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(idx)}
+                            className="text-charcoal/40 hover:text-red-700 transition-colors p-0.5"
+                            title="Remove file"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
             <AnimatePresence>
+
               {status === 'error' && (
                 <motion.div
                   role="alert"

@@ -1,13 +1,50 @@
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
 /**
- * FRONTEND PLACEHOLDER — nothing is sent or stored anywhere.
- *
- * This is the only place enquiry submission is handled. When a backend exists,
- * replace the body with a real request (e.g. fetch to your API) and keep the
- * same contract: resolve on success, throw on failure. Drop `simulated` once
- * data is genuinely delivered so the demo notice disappears from the form.
+ * Submits enquiry to the Verdict Beach backend API.
+ * Supports both JSON payloads and multipart file attachments.
+ * Resolves with the created enquiry data on success, throws on failure.
  */
 export async function submitEnquiry(values) {
-  await new Promise((resolve) => setTimeout(resolve, 1200)); // simulate latency
-  if (import.meta.env.DEV) console.info('[placeholder] enquiry received (not saved):', values);
-  return { ok: true, simulated: true };
+  let response;
+
+  const hasFiles = Array.isArray(values.files) && values.files.length > 0;
+
+  if (hasFiles) {
+    const formData = new FormData();
+    Object.entries(values).forEach(([key, val]) => {
+      if (key !== 'files' && val !== undefined && val !== null) {
+        formData.append(key, val);
+      }
+    });
+
+    values.files.forEach((file) => {
+      formData.append('attachments', file);
+    });
+
+    response = await fetch(`${API_BASE_URL}/enquiries`, {
+      method: 'POST',
+      body: formData,
+    });
+  } else {
+    const { files, ...jsonValues } = values;
+    response = await fetch(`${API_BASE_URL}/enquiries`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(jsonValues),
+    });
+  }
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = data?.message || 'Failed to submit enquiry';
+    const error = new Error(message);
+    error.errors = data?.errors || [];
+    throw error;
+  }
+
+  return { ok: true, data: data.data };
 }
