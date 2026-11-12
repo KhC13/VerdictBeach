@@ -3,8 +3,31 @@ import { ease } from './AnimatedSection';
 
 /** Shared header band for inner pages. */
 export default function PageHero({ eyebrow, title, text }) {
+  const backgrounds = {
+  "About us": "/images/backgrounds/02_blurred_glass_meeting_room.jpg",
+  "Services": "/images/backgrounds/05_legal_desk_interior.jpg",
+  "For businesses": "/images/backgrounds/04_glass_conference_room.jpg",
+  "Contact us": "/images/backgrounds/03_city_skyline_sunset.jpg",
+};
   return (
-    <section className="grain relative overflow-hidden bg-navy pb-20 pt-40 sm:pb-28 sm:pt-48">
+    <section className="grain relative isolate overflow-hidden bg-navy pb-20 pt-40 sm:pb-28 sm:pt-48">
+
+  {/* Background image */}
+  <div
+    aria-hidden="true"
+    className="absolute inset-0 bg-cover bg-center"
+    style={{
+     backgroundImage: `url('${backgrounds[eyebrow]}')`,
+    }}
+  />
+
+  {/* Dark overlay */}
+  <div
+    aria-hidden="true"
+    className="absolute inset-0 bg-navy/65"
+  />
+
+  {/* Keep your existing PageHero content below */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/3 justify-around md:flex">
         {[0, 1, 2, 3, 4].map((i) => (
           <motion.span
