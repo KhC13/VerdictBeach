@@ -14,42 +14,35 @@ export const services = [
     icon: Scale,
     title: 'Legal Assistance',
     description:
-      'General legal guidance and issue assessment. Assistance in understanding legal procedures and support in identifying appropriate next steps.',
+      'Practical guidance on the legal questions that matter to you, explained plainly so you can act with confidence.',
   },
   {
     id: 'business-documentation',
     icon: FileText,
     title: 'Business Documentation',
     description:
-      'Business registration documentation support, drafting and review coordination for business documents, and foundational business paperwork.',
+      'Accurate, well-organised documentation prepared and reviewed to support the way your business operates.',
   },
   {
     id: 'agreements-contracts',
     icon: Handshake,
-    title: 'Agreements & Contracts',
+    title: 'Agreements and Contracts',
     description:
-      'Non-Disclosure Agreements (NDAs), service and consultancy agreements, partnership and vendor agreements, and employment or freelancer agreements.',
+      'Clear agreements drafted and reviewed to define expectations, allocate responsibility and protect your interests.',
   },
   {
     id: 'startup-legal-support',
     icon: Rocket,
     title: 'Startup Legal Support',
     description:
-      'Founder and co-founder agreements, startup structuring assistance, equity and ownership documentation support, and early-stage legal foundation.',
+      'Legal foundations for new ventures, from early structuring questions to the paperwork that supports growth.',
   },
   {
-    id: 'compliance-support',
+    id: 'compliance-services',
     icon: ShieldCheck,
-    title: 'Compliance & Regulatory Support',
+    title: 'Compliance Services',
     description:
-      'Business compliance assistance, documentation and filing coordination, regulatory requirement tracking, and ongoing compliance support.',
-  },
-  {
-    id: 'business-legal-advisory',
-    icon: Building2,
-    title: 'Business Legal Advisory',
-    description:
-      'Legal requirement assessment, contractual and operational risk identification, assistance with business legal decisions, and referrals or coordination with relevant legal professionals where required.',
+      'Help understanding and meeting the regulatory requirements that apply to your business, and keeping on top of them.',
   },
 ];
 
@@ -61,10 +54,10 @@ export const reasons = [
 ];
 
 export const audiences = [
-  { icon: Rocket, title: 'Startups', text: 'Build the right legal foundation before your business scales.' },
-  { icon: UserRound, title: 'Founders', text: 'Protect your stake, your governance rights, and your operating structure from the start.' },
-  { icon: Lightbulb, title: 'SMEs & Enterprises', text: 'Organise contracts, documentation and ongoing compliance with practical, dependable support.' },
-  { icon: Building2, title: 'Growing Businesses', text: 'Prepare for partnerships, expansion and changing business needs with clear legal structures in place.' },
+  { icon: Rocket, title: 'Startups', text: 'Put the right legal groundwork in place from the start, without slowing the build.' },
+  { icon: UserRound, title: 'Founders', text: 'Clear agreements and documentation between you, your co-founders and your partners.' },
+  { icon: Lightbulb, title: 'Entrepreneurs', text: 'Practical support as you launch, formalise and take on new commercial relationships.' },
+  { icon: Building2, title: 'Established companies', text: 'Dependable help with contracts, documentation and ongoing compliance obligations.' },
 ];
 
 export const businessSupport = [

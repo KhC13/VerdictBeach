@@ -1,82 +1,57 @@
-import { useRef, useState, useEffect } from 'react';
-import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import Button from './Button';
-import ArchitectureArt from './ArchitectureArt';
 import { ease } from './AnimatedSection';
-import { services } from '../data/content';
+import { heroSlides } from '../data/heroSlides';
 
 const headline = [
-  { t: 'Strategic' },
-  { t: 'legal' },
+  { t: 'Legal' },
   { t: 'counsel' },
+  { t: 'built' },
   { t: 'for' },
   { t: 'ambitious', em: true },
-  { t: 'founders' },
-  { t: 'and' },
-  { t: 'scaling', em: true },
   { t: 'businesses.' },
 ];
-const heroImages = [
-  '/images/backgrounds/03_legal_office_lady_justice.jpg',
-  '/images/backgrounds/Cinematic Executive Law Office at Dusk.png',
-  '/images/backgrounds/Luxury Law Office Skyline Interior.png',
-];
+
+const INTERVAL = 6500;
+
 export default function HeroSection() {
   const ref = useRef(null);
-  const [activeImage, setActiveImage] = useState(0);
-
-useEffect(() => {
-  const interval = setInterval(() => {
-    setActiveImage((current) => (current + 1) % heroImages.length);
-  }, 5000);
-
-  return () => clearInterval(interval);
-}, []);
+  const reduce = useReducedMotion();
+  const [index, setIndex] = useState(0);
   const { scrollYProgress } = useScroll({ target: ref, offset: ['start start', 'end start'] });
-  const artY = useTransform(scrollYProgress, [0, 1], [0, 90]);
-  const glowY = useTransform(scrollYProgress, [0, 1], [0, -80]);
+  const bgY = useTransform(scrollYProgress, [0, 1], [0, 120]);
+
+  // Auto-rotate the background; the timer restarts whenever the slide changes (incl. manual clicks).
+  useEffect(() => {
+    if (reduce) return undefined;
+    const id = setTimeout(() => setIndex((i) => (i + 1) % heroSlides.length), INTERVAL);
+    return () => clearTimeout(id);
+  }, [index, reduce]);
 
   return (
-    <section
-  ref={ref}
-  className="grain relative isolate flex min-h-[100svh] flex-col justify-center overflow-hidden bg-navy pb-12 pt-32 sm:pt-36"
->
-  {/* Animated background images */}
-  <AnimatePresence mode="sync">
-    <motion.div
-      key={activeImage}
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-0 bg-cover bg-center"
-      style={{
-        backgroundImage: `url('${heroImages[activeImage]}')`,
-      }}
-      initial={{ opacity: 0, scale: 1.04 }}
-      animate={{ opacity: 1, scale: 1.10 }}
-      exit={{ opacity: 0 }}
-      transition={{
-        opacity: { duration: 1.5 },
-        scale: { duration: 5, ease: 'linear' },
-      }}
-    />
-  </AnimatePresence>
-
-  {/* Navy overlay — no image blur */}
-  <div
-    aria-hidden="true"
-    className="pointer-events-none absolute inset-0 z-[1] bg-navy/55"
-  />
-      <motion.div style={{ y: glowY }} aria-hidden="true" className="pointer-events-none absolute inset-0">
-        <div className="absolute -right-40 -top-40 h-[520px] w-[520px] animate-drift rounded-full bg-gold/[0.12] blur-3xl" />
-        <div className="absolute -bottom-52 -left-40 h-[460px] w-[460px] animate-drift rounded-full bg-[#2a4570]/40 blur-3xl [animation-delay:-7s]" />
+    <section ref={ref} className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-navy pb-24 pt-32 sm:pt-36">
+      {/* Rotating background images (crossfade + slow zoom) */}
+      <motion.div style={{ y: bgY }} aria-hidden="true" className="absolute -inset-y-16 inset-x-0">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={index}
+            className="absolute inset-0 bg-cover"
+            style={{ backgroundImage: `url(${heroSlides[index].src})`, backgroundPosition: heroSlides[index].position }}
+            initial={{ opacity: 0, scale: reduce ? 1 : 1.12 }}
+            animate={{ opacity: 1, scale: 1, transition: { opacity: { duration: 1.6 }, scale: { duration: (INTERVAL + 1600) / 1000, ease: 'linear' } } }}
+            exit={{ opacity: 0, transition: { duration: 1.6 } }}
+          />
+        </AnimatePresence>
       </motion.div>
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-70 [mask-image:linear-gradient(to_bottom,black,transparent_85%)]"
-        style={{ backgroundImage: 'linear-gradient(to right, rgba(245,241,232,.05) 1px, transparent 1px)', backgroundSize: '12.5% 100%' }}
-      />
 
-      <div className="container-vb relative grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
-        <div className="lg:col-span-7">
+      {/* Readability overlays: navy wash + left-to-right fade behind the text */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-navy/40" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-navy/95 via-navy/70 to-transparent sm:via-navy/50" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-navy to-transparent" />
+
+      <div className="container-vb relative">
+        <div className="max-w-3xl">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -106,9 +81,10 @@ useEffect(() => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease, delay: 1.05 }}
-            className="mt-8 max-w-xl text-lg leading-relaxed text-ivory/70"
+            className="mt-8 max-w-xl text-lg leading-relaxed text-ivory/75"
           >
-            Clear legal advisory, airtight contracts, and proactive compliance—so you can build without friction.
+            Verdict Beach offers clear, dependable legal support — from documentation and agreements to compliance — so
+            you can build and operate with confidence.
           </motion.p>
 
           <motion.div
@@ -121,39 +97,43 @@ useEffect(() => {
             <Button to="/services" variant="outline">Explore Our Services</Button>
           </motion.div>
         </div>
-
-        <motion.div style={{ y: artY }} className="relative mx-auto w-full max-w-md lg:col-span-5 lg:max-w-none">
-          <div className="relative rounded-[2rem] border border-gold/25 bg-navy-800/60 p-6 sm:p-10">
-            <ArchitectureArt className="h-auto w-full" />
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.9, ease, delay: 1.5 }}
-              className="absolute -bottom-6 left-4 right-4 sm:-left-8 sm:right-auto"
-            >
-              <div className="animate-drift rounded-2xl border border-gold/30 bg-navy px-6 py-4 shadow-lift">
-                <p className="text-[10px] uppercase tracking-[0.28em] text-gold">A vertical of</p>
-                <p className="mt-1 font-serif text-lg text-ivory">Belvo Ventures Group</p>
-              </div>
-            </motion.div>
-          </div>
-        </motion.div>
       </div>
 
+      {/* Slide indicators + parent badge */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 1, delay: 1.7 }}
-        className="container-vb relative mt-20 hidden border-t border-ivory/10 pt-6 md:block"
+        transition={{ duration: 1, delay: 1.6 }}
+        className="container-vb absolute inset-x-0 bottom-8 flex items-end justify-between gap-6"
       >
-        <ul className="flex flex-wrap items-center gap-x-8 gap-y-2 text-[11px] uppercase tracking-[0.22em] text-ivory/50">
-          {services.map((s) => (
-            <li key={s.id} className="flex items-center gap-8">
-              {s.title}
-              <span className="h-1 w-1 rounded-full bg-gold/60 last:hidden" aria-hidden="true" />
-            </li>
+        <div className="flex items-center gap-3" role="group" aria-label="Background image">
+          {heroSlides.map((s, i) => (
+            <button
+              key={s.src}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={`Show background ${i + 1} of ${heroSlides.length}`}
+              aria-current={i === index}
+              className="group flex h-8 items-center"
+            >
+              <span className="relative block h-px w-10 overflow-hidden bg-ivory/30 transition-all group-hover:bg-ivory/60 sm:w-14">
+                {i === index && (
+                  <motion.span
+                    key={`p-${index}`}
+                    className="absolute inset-y-0 left-0 w-full origin-left bg-gold"
+                    initial={{ scaleX: reduce ? 1 : 0 }}
+                    animate={{ scaleX: 1 }}
+                    transition={{ duration: INTERVAL / 1000, ease: 'linear' }}
+                  />
+                )}
+              </span>
+            </button>
           ))}
-        </ul>
+        </div>
+        <div className="hidden rounded-2xl border border-gold/30 bg-navy/80 px-6 py-4 backdrop-blur-sm sm:block">
+          <p className="text-[10px] uppercase tracking-[0.28em] text-gold">A vertical of</p>
+          <p className="mt-1 font-serif text-lg text-ivory">Belvo Ventures Group</p>
+        </div>
       </motion.div>
     </section>
   );
