@@ -1,6 +1,6 @@
 # ⚖️ Verdict Beach
 
-A full-stack corporate legal services website for **Verdict Beach**, the legal services vertical of Belvo Ventures Group. It presents practice areas clearly to startups and growing businesses, and lets prospective clients submit confidential consultation requests that are validated, stored, and emailed to the intake team.
+A full-stack corporate legal services website for **Verdict Beach**, the legal services vertical of Belvo Ventures Group. It presents practice areas clearly to startups and growing businesses, and lets prospective clients submit confidential enquiries that are validated and stored in a database for the intake team.
 
 **Live site:** https://verdict-beach-26dy.vercel.app/
 
@@ -9,30 +9,30 @@ A full-stack corporate legal services website for **Verdict Beach**, the legal s
 ## ✨ Features
 
 - **Responsive marketing site** with Home, About, Services, For Businesses, and Contact pages
-- **Service discovery** across Legal Advisory, Corporate Documentation, Commercial Agreements, Startup Counsel, and Regulatory Compliance
-- **Consultation enquiry form** with client-side and server-side validation, optional file attachments, and submission status feedback
-- **Enquiry API** that stores records in MongoDB and sends email notifications
-- **Protection against spam and abuse** through rate limiting, CORS allowlisting, and Helmet security headers
-- **Admin enquiry management** endpoints (list, filter, search, update status, delete) behind JWT authentication
-- **Centralized content** in config and data files, so copy and disclosures can be updated without touching components
-- **Motion design** with scroll-triggered section reveals and page transitions, respecting reduced-motion preferences
+- **Service discovery** across Legal Assistance, Business Documentation, Agreements and Contracts, Startup Legal Support, and Compliance Services
+- **Enquiry form** with client-side and server-side validation, optional file attachments (up to 5 files, 10 MB each), and submission feedback
+- **Enquiry API** that validates input with Zod, stores records in MongoDB, and returns standard HTTP status codes
+- **Admin enquiry management** (JWT-protected): list with pagination, search, and filters; view dashboard stats; update status and add internal notes; delete
+- **Security basics:** Helmet security headers, CORS origin allowlist, and rate limiting on login
+- **Centralized content** in config and data files, so copy and service details can be updated without touching components
+- **Motion design** with scroll-triggered section reveals and hero transitions, with reduced-motion support
 
 ---
 
 ## 🛠️ Tech Stack
 
 **Frontend**
-- React 19, Vite
+- React 19, Vite 8
 - React Router 7
 - Tailwind CSS 3
 - Framer Motion, Lucide React
 
 **Backend**
-- Node.js, Express 4
-- MongoDB with Mongoose
-- Zod and express-validator for input validation
-- Helmet, CORS, express-rate-limit for security
-- JSON Web Tokens and bcryptjs for admin authentication
+- Node.js (ES modules), Express 4
+- MongoDB with Mongoose 8
+- Zod for request validation
+- Helmet, CORS, express-rate-limit
+- JSON Web Tokens and bcryptjs for authentication
 - Multer for file uploads, Nodemailer for email notifications
 
 ---
@@ -44,7 +44,6 @@ A full-stack corporate legal services website for **Verdict Beach**, the legal s
 - Node.js 18 or later
 - npm
 - MongoDB running locally, or a MongoDB Atlas connection string
-- An SMTP account for email notifications (optional for local development)
 
 ### 1️⃣ Clone the repository
 
@@ -72,6 +71,7 @@ CLIENT_URL=http://localhost:5173
 JWT_SECRET=replace_with_a_long_random_secret
 JWT_EXPIRES_IN=7d
 
+# Optional: enables email notifications
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -87,6 +87,8 @@ npm run dev     # development, with auto-reload
 npm start       # production
 ```
 
+The API runs at `http://localhost:5000/api`.
+
 ### 3️⃣ Set up the frontend
 
 Open a second terminal:
@@ -96,7 +98,7 @@ cd frontend
 npm install
 ```
 
-Optionally, create `frontend/.env` to point the frontend at a different API:
+Optionally, create `frontend/.env` to point the frontend at a different API (the default is `http://localhost:5000/api`):
 
 ```env
 VITE_API_BASE_URL=http://localhost:5000/api
@@ -126,26 +128,26 @@ Base URL: `/api`
 
 | Method | Endpoint | Access | Description |
 |--------|----------|--------|-------------|
-| GET | `/health` | Public | API status, uptime, and database connectivity |
-| POST | `/enquiries` | Public | Submit a consultation enquiry (JSON or multipart with attachments) |
-| POST | `/auth/register` | Public | Register an admin user |
+| GET | `/health` | Public | API status, uptime, and database connection (returns `503` if the database is down) |
+| POST | `/enquiries` | Public | Submit an enquiry (JSON, or multipart form with `attachments`) |
+| POST | `/auth/register` | Public | Create a user account (`role`: `admin`, `staff`, or `counsel`) |
 | POST | `/auth/login` | Public | Log in and receive a JWT (rate limited) |
-| GET | `/auth/me` | Authenticated | Current user profile |
-| GET | `/enquiries` | Authenticated | List enquiries with pagination and filters |
-| GET | `/enquiries/stats` | Authenticated | Totals, recent activity, and counts by status |
-| GET | `/enquiries/:id` | Authenticated | Retrieve one enquiry |
-| PATCH | `/enquiries/:id` | Authenticated | Update status and notes |
-| DELETE | `/enquiries/:id` | Authenticated | Delete an enquiry |
+| GET | `/auth/me` | Bearer token | Current user profile |
+| GET | `/enquiries` | Bearer token | List enquiries (`page`, `limit`, `status`, `service`, `search`, `sortBy`, `sortOrder`) |
+| GET | `/enquiries/stats` | Bearer token | Totals, last 7 days, and counts by status |
+| GET | `/enquiries/:id` | Bearer token | Retrieve one enquiry |
+| PATCH | `/enquiries/:id` | Bearer token | Update `status` (`new`, `in_review`, `contacted`, `closed`) and/or add a `note` |
+| DELETE | `/enquiries/:id` | Bearer token | Delete an enquiry |
 
-**Example request:**
+**Example enquiry submission:**
 
 ```bash
 curl -X POST http://localhost:5000/api/enquiries \
   -H "Content-Type: application/json" \
-  -d '{"fullName":"Asha Rao","email":"asha@example.com","serviceType":"startup-counsel","message":"We need help with our seed round documents."}'
+  -d '{"name":"Asha Rao","email":"asha@example.com","phone":"+91 98765 43210","companyName":"Example Labs","role":"Startup Founder","service":"Startup Legal Support","message":"We need help with our seed round documents."}'
 ```
 
-Successful submissions return `201 Created`. Invalid payloads return `400 Bad Request`, and excessive requests return `429 Too Many Requests`.
+Successful submissions return `201 Created`. Invalid payloads return `400 Bad Request`, and excessive login attempts return `429 Too Many Requests`. Management endpoints require an `Authorization: Bearer <token>` header, which you get from `/auth/login`.
 
 ---
 
@@ -154,43 +156,42 @@ Successful submissions return `201 Created`. Invalid payloads return `400 Bad Re
 ```
 VerdictBeach/
 ├── frontend/
-│   ├── public/                 # Static assets (hero images, backgrounds, favicon)
+│   ├── public/                    # Favicon, hero images, and background images
 │   ├── src/
-│   │   ├── components/         # Navbar, Footer, ContactForm, ServiceCard, animations, SVG art
+│   │   ├── components/            # Navbar, Footer, ContactForm, ServiceCard, animations, SVG art
 │   │   ├── config/
-│   │   │   └── company.js      # Company metadata, office hours, contact details
+│   │   │   └── company.js         # Company metadata, office hours, contact details
 │   │   ├── data/
-│   │   │   ├── content.js      # Services, FAQs, and page copy
-│   │   │   └── heroSlides.js   # Homepage hero slides
+│   │   │   ├── content.js         # Services, values, FAQs, and page copy
+│   │   │   └── heroSlides.js      # Homepage hero slides
 │   │   ├── lib/
-│   │   │   └── submitEnquiry.js # API client for enquiry submission
-│   │   ├── pages/              # Home, About, Services, ForBusinesses, Contact
-│   │   ├── styles/             # Global Tailwind styles
-│   │   ├── App.jsx             # Routing and layout shell
-│   │   └── main.jsx            # Entry point
+│   │   │   └── submitEnquiry.js   # API client for enquiry submission
+│   │   ├── pages/                 # Home, About, Services, ForBusinesses, Contact
+│   │   ├── styles/                # Global styles and Tailwind layers
+│   │   ├── App.jsx                # Routing and layout shell
+│   │   └── main.jsx               # Entry point
 │   ├── index.html
 │   ├── tailwind.config.js
 │   └── vite.config.js
 ├── backend/
 │   ├── src/
-│   │   ├── config/             # Database connection and environment setup
-│   │   ├── controllers/        # Request handlers
-│   │   ├── middlewares/        # Auth, validation, uploads, error handling
-│   │   ├── models/             # Mongoose schemas (Enquiry, Consultation, User)
-│   │   ├── routes/             # Route definitions
-│   │   ├── services/           # Business logic and email service
-│   │   ├── validations/        # Request validation schemas
-│   │   ├── app.js              # Express app, CORS, security, rate limiting
-│   │   └── server.js           # Server entry point
-│   ├── uploads/                # Uploaded attachments (not committed)
-│   ├── test_suite.js           # API test script
+│   │   ├── config/                # Database connection and environment variables
+│   │   ├── controllers/           # Request handlers (auth, enquiries, health)
+│   │   ├── middlewares/           # Authentication, validation, uploads, error handling
+│   │   ├── models/                # Mongoose schemas (Enquiry, User)
+│   │   ├── routes/                # Route definitions mounted under /api
+│   │   ├── services/              # Business logic and email service
+│   │   ├── utils/                 # API errors, responses, mailer
+│   │   ├── validations/           # Zod validation schemas
+│   │   ├── app.js                 # Express app, security, CORS, rate limiting
+│   │   └── server.js              # Server entry point
+│   ├── uploads/documents/         # Uploaded attachments (not committed)
+│   ├── test_suite.js              # API verification script
 │   └── .env.example
-├── postman/                    # Postman workspace globals
-└── docs/
-    └── screenshots/            # Screenshots used in this README
+└── postman/                       # Postman workspace globals
 ```
 
-
+---
 
 ## ☁️ Deployment
 
@@ -204,17 +205,17 @@ The frontend is deployed on Vercel at https://verdict-beach-26dy.vercel.app/. Wh
 
 ## 🧪 Testing
 
-With the backend running:
+With the backend running on port 5000:
 
 ```bash
 cd backend
 npm test
 ```
 
-The frontend was also verified manually across mobile (375px), tablet (768px), and desktop (1440px) viewports, including form validation, error handling, and production build communication with the API.
+The test script checks that protected routes reject unauthenticated requests, registers and logs in an admin account, and submits and manages enquiries. It creates test data in the database, so run it against a development database.
+
 
 ---
-
 
 ## 📄 License
 
