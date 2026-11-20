@@ -49,7 +49,7 @@ const attachmentSchema = new mongoose.Schema(
     },
     url: {
       type: String,
-      required: true,
+      default: '',
     },
   },
   { timestamps: { createdAt: true, updatedAt: false } }

@@ -66,6 +66,12 @@ export const businessSupport = [
   { icon: ShieldCheck, title: 'Compliance requirements', text: 'Support in understanding what applies to you and meeting those requirements.' },
 ];
 
+export const processSteps = [
+  { n: '01', title: 'Tell us what you need', text: 'Send a short enquiry about the service you are looking for and any relevant background.' },
+  { n: '02', title: 'We review your enquiry', text: 'Our team reads your details and identifies the right support for your situation.' },
+  { n: '03', title: 'Agree the next step', text: 'We reply to you directly to confirm the scope of work and what happens next.' },
+];
+
 export const values = [
   { title: 'Integrity', text: 'Honest, straightforward advice, including when it is not what you hoped to hear.' },
   { title: 'Clarity', text: 'Complex legal matters explained in language that supports good decisions.' },

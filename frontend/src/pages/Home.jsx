@@ -8,7 +8,7 @@ import CTASection from '../components/CTASection';
 import Button from '../components/Button';
 import AnimatedSection, { Reveal } from '../components/AnimatedSection';
 import { ArchPattern } from '../components/ArchitectureArt';
-import { services, reasons, audiences } from '../data/content';
+import { services, reasons, audiences, processSteps } from '../data/content';
 
 export default function Home() {
   return (
@@ -52,7 +52,7 @@ export default function Home() {
           <AnimatedSection className="flex flex-col justify-between gap-8 lg:flex-row lg:items-end">
             <SectionHeading
               eyebrow="Core practice areas"
-              title="Six service categories designed for growing businesses"
+              title="Five practice areas built for growing businesses"
               text="From compliance and contracts to startup foundations and legal advisory, each service is built around the legal needs that matter most to forward-moving businesses."
             />
             <Reveal>
@@ -69,6 +69,27 @@ export default function Home() {
               <div className="mt-6"><Button to="/contact" variant="dark">Book a Consultation</Button></div>
             </Reveal>
           </AnimatedSection>
+        </div>
+      </section>
+
+      {/* 2b. How it works */}
+      <section className="section-pad border-y border-navy/10 bg-white/60">
+        <div className="container-vb">
+          <AnimatedSection>
+            <SectionHeading eyebrow="How it works" title="From first question to next step, in three clear stages" />
+          </AnimatedSection>
+          <AnimatedSection stagger={0.1} className="mt-14 grid gap-10 md:grid-cols-3">
+            {processSteps.map((p) => (
+              <Reveal key={p.n} className="border-t border-gold/50 pt-6">
+                <span className="font-serif text-4xl text-gold-600">{p.n}</span>
+                <h3 className="mt-4 font-serif text-2xl">{p.title}</h3>
+                <p className="mt-3 text-[16px] leading-relaxed text-charcoal/85">{p.text}</p>
+              </Reveal>
+            ))}
+          </AnimatedSection>
+          <Reveal className="mt-14">
+            <Button to="/contact" variant="dark">Start your enquiry</Button>
+          </Reveal>
         </div>
       </section>
 

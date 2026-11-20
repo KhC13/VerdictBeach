@@ -18,7 +18,7 @@ export const registerSchema = z.object({
     role: z
       .enum(['admin', 'staff', 'counsel'])
       .optional()
-      .default('admin'),
+      .default('staff'),
   }),
 });
 

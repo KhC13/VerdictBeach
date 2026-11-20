@@ -37,7 +37,9 @@ export const createEnquirySchema = z.object({
     message: z
       .string({ required_error: 'Please tell us a little about your enquiry.' })
       .trim()
-      .min(10, 'Please add a little more detail (at least 10 characters).'),
+      .min(10, 'Please add a little more detail (at least 10 characters).')
+      .max(5000, 'Please keep your message under 5000 characters.'),
+    website: z.string().max(200).optional().default(''),
   }),
 });
 

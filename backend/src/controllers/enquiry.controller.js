@@ -1,4 +1,7 @@
+import path from 'path';
 import { EnquiryService } from '../services/enquiry.service.js';
+import { UPLOADS_DIR } from '../middlewares/upload.middleware.js';
+import { ApiError } from '../utils/apiError.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -7,6 +10,11 @@ export class EnquiryController {
    * Handle POST /api/enquiries (supports multipart file uploads)
    */
   static createEnquiry = asyncHandler(async (req, res) => {
+    // Honeypot: the hidden "website" field is empty for real people. Bots that fill it get a fake success.
+    if (req.body.website) {
+      return res.status(201).json(ApiResponse.created({ id: null }, 'Your enquiry has been submitted successfully. Our team will contact you shortly.'));
+    }
+
     const metadata = {
       ipAddress: req.ip || req.headers['x-forwarded-for'] || '',
       userAgent: req.headers['user-agent'] || '',
@@ -17,7 +25,6 @@ export class EnquiryController {
       filename: file.filename,
       mimeType: file.mimetype,
       size: file.size,
-      url: `/uploads/documents/${file.filename}`,
     }));
 
     const enquiry = await EnquiryService.createEnquiry(
@@ -28,12 +35,28 @@ export class EnquiryController {
       metadata
     );
 
+    // Return only the reference, never the stored record.
     return res.status(201).json(
       ApiResponse.created(
-        enquiry,
+        { id: enquiry._id },
         'Your enquiry has been submitted successfully. Our team will contact you shortly.'
       )
     );
+  });
+
+  /**
+   * GET /api/enquiries/:id/attachments/:index (Protected)
+   * Attachments are private: they are only served to authenticated staff.
+   */
+  static downloadAttachment = asyncHandler(async (req, res, next) => {
+    const enquiry = await EnquiryService.getEnquiryById(req.params.id);
+    const attachment = enquiry.attachments[Number(req.params.index)];
+    if (!attachment) throw ApiError.notFound('Attachment not found');
+
+    const filePath = path.join(UPLOADS_DIR, path.basename(attachment.filename));
+    res.download(filePath, attachment.originalName, (err) => {
+      if (err && !res.headersSent) next(ApiError.notFound('Attachment file is no longer available'));
+    });
   });
 
   /**

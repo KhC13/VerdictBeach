@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
-import { authenticate } from '../middlewares/auth.middleware.js';
+import { authenticate, authorize } from '../middlewares/auth.middleware.js';
 import { validate } from '../middlewares/validate.js';
 import { loginSchema, registerSchema } from '../validations/auth.validation.js';
 
 const router = Router();
 
-router.post('/register', validate(registerSchema), AuthController.register);
+// Only an existing admin can create accounts. There is no public sign-up.
+router.post('/register', authenticate, authorize('admin'), validate(registerSchema), AuthController.register);
 router.post('/login', validate(loginSchema), AuthController.login);
 router.get('/me', authenticate, AuthController.getMe);
 

@@ -1,123 +1,126 @@
+// Backend verification suite. Needs a running server and an existing admin account.
+//
+// 1. Create the admin once (per environment):
+//    ADMIN_NAME="Eleanor Vance" ADMIN_EMAIL=admin@yourdomain.com ADMIN_PASSWORD='a-long-password-here' npm run create-admin
+// 2. Start the server:  npm run dev
+// 3. Run the checks:    ADMIN_EMAIL=admin@yourdomain.com ADMIN_PASSWORD='...' TEST_EMAIL_TO=you@yourdomain.com npm test
+//
+// TEST_EMAIL_TO receives the client confirmation email, so use an inbox you can check.
+
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
 
-const API_BASE = 'http://localhost:5000/api';
+const API = (process.env.API_BASE || 'http://localhost:5000/api').replace(/\/$/, '');
+const ORIGIN = API.replace(/\/api$/, '');
+const { ADMIN_EMAIL, ADMIN_PASSWORD } = process.env;
+const TEST_EMAIL_TO = process.env.TEST_EMAIL_TO || 'qa-test@example.com';
 
-async function runTests() {
-  console.log('=== VERDICT BEACH BACKEND VERIFICATION SUITE ===\n');
-
-  // Test 1: Unauthenticated access to /api/enquiries
-  console.log('1. Testing Unauthenticated Access to GET /api/enquiries:');
-  const res1 = await fetch(`${API_BASE}/enquiries`);
-  const data1 = await res1.json();
-  console.log(`Status: ${res1.status} (${res1.status === 401 ? 'PASS - Protected' : 'FAIL'})`);
-  console.log(`Response:`, data1);
-  console.log('------------------------------------------------\n');
-
-  // Test 2: Admin Registration
-  console.log('2. Testing Admin User Registration (POST /api/auth/register):');
-  const adminEmail = `admin_${Date.now()}@verdictbeach.com`;
-  const res2 = await fetch(`${API_BASE}/auth/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: 'Eleanor Vance, Managing Partner',
-      email: adminEmail,
-      password: 'SecurePassword123!',
-      role: 'admin',
-    }),
-  });
-  const data2 = await res2.json();
-  console.log(`Status: ${res2.status} (${res2.status === 201 ? 'PASS' : 'FAIL'})`);
-  console.log(`User created: ${data2.data?.user?.email}, Role: ${data2.data?.user?.role}`);
-  const authToken = data2.data?.token;
-  console.log(`Token received: ${authToken ? authToken.slice(0, 25) + '...' : 'NONE'}`);
-  console.log('------------------------------------------------\n');
-
-  // Test 3: Admin Login
-  console.log('3. Testing Admin Login (POST /api/auth/login):');
-  const res3 = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: adminEmail,
-      password: 'SecurePassword123!',
-    }),
-  });
-  const data3 = await res3.json();
-  console.log(`Status: ${res3.status} (${res3.status === 200 ? 'PASS' : 'FAIL'})`);
-  console.log(`Login message: ${data3.message}`);
-  console.log('------------------------------------------------\n');
-
-  // Test 4: Current User Profile (GET /api/auth/me)
-  console.log('4. Testing Protected Profile (GET /api/auth/me):');
-  const res4 = await fetch(`${API_BASE}/auth/me`, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
-  const data4 = await res4.json();
-  console.log(`Status: ${res4.status} (${res4.status === 200 ? 'PASS' : 'FAIL'})`);
-  console.log(`Profile: ${data4.data?.name} (${data4.data?.email})`);
-  console.log('------------------------------------------------\n');
-
-  // Test 5: Authenticated Access to Enquiries (GET /api/enquiries)
-  console.log('5. Testing Authenticated Access to GET /api/enquiries:');
-  const res5 = await fetch(`${API_BASE}/enquiries`, {
-    headers: { Authorization: `Bearer ${authToken}` },
-  });
-  const data5 = await res5.json();
-  console.log(`Status: ${res5.status} (${res5.status === 200 ? 'PASS' : 'FAIL'})`);
-  console.log(`Total enquiries in DB: ${data5.data?.pagination?.total}`);
-  console.log('------------------------------------------------\n');
-
-  // Test 6: Public Enquiry Submission with Document Attachment (Multipart)
-  console.log('6. Testing Public Enquiry with Document Attachment (POST /api/enquiries):');
-  // Create a temporary sample agreement file
-  const sampleFilePath = path.resolve('sample_founder_agreement.txt');
-  fs.writeFileSync(
-    sampleFilePath,
-    'CONFIDENTIAL DRAFT: Founder Collaboration and Equity Vesting Agreement - Verdict Beach Client.'
-  );
-
-  const fileBlob = new Blob([fs.readFileSync(sampleFilePath)], { type: 'text/plain' });
-  const formData = new FormData();
-  formData.append('name', 'Sophia Sterling');
-  formData.append('companyName', 'Nova Robotics Corp');
-  formData.append('email', 'sophia@novarobotics.io');
-  formData.append('phone', '+1 650 492 8812');
-  formData.append('role', 'Startup Founder');
-  formData.append('service', 'Startup Legal Support');
-  formData.append(
-    'message',
-    'We are attaching our initial founder collaboration draft for counsel review and restructuring.'
-  );
-  formData.append('attachments', fileBlob, 'sample_founder_agreement.txt');
-
-  const res6 = await fetch(`${API_BASE}/enquiries`, {
-    method: 'POST',
-    body: formData,
-  });
-  const data6 = await res6.json();
-  console.log(`Status: ${res6.status} (${res6.status === 201 ? 'PASS' : 'FAIL'})`);
-  console.log(`Created enquiry ID: ${data6.data?._id}`);
-  console.log(`Attachments stored:`, data6.data?.attachments);
-
-  // Clean up temporary local file
-  if (fs.existsSync(sampleFilePath)) fs.unlinkSync(sampleFilePath);
-
-  // Test 7: Verify Document Static Serving
-  if (data6.data?.attachments?.length > 0) {
-    const docUrl = `http://localhost:5000${data6.data.attachments[0].url}`;
-    console.log(`\n7. Testing Static Document Access (${docUrl}):`);
-    const res7 = await fetch(docUrl);
-    const content = await res7.text();
-    console.log(`Status: ${res7.status} (${res7.status === 200 ? 'PASS' : 'FAIL'})`);
-    console.log(`Fetched file snippet: "${content.slice(0, 45)}..."`);
-  }
-
-  console.log('\n=== ALL VERIFICATION TESTS PASSED SUCCESSFULLY ===');
+let passed = 0;
+let failed = 0;
+function check(label, ok, detail = '') {
+  if (ok) passed++;
+  else failed++;
+  console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${!ok && detail ? `  (${detail})` : ''}`);
 }
 
-runTests().catch((err) => {
-  console.error('Test suite failed:', err);
+async function call(method, url, { token, json, form } = {}) {
+  const headers = {};
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let body;
+  if (json) {
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(json);
+  }
+  if (form) body = form;
+  const res = await fetch(url, { method, headers, body });
+  const data = await res.json().catch(() => null);
+  return { status: res.status, data };
+}
+
+const validEnquiry = (extra = {}) => ({
+  name: 'Sophia Sterling',
+  companyName: 'Nova Robotics Corp',
+  email: TEST_EMAIL_TO,
+  phone: '+1 650 492 8812',
+  role: 'Startup Founder',
+  service: 'Startup Legal Support',
+  message: 'Automated verification test enquiry. Please ignore.',
+  ...extra,
+});
+
+async function main() {
+  if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
+    console.error('Set ADMIN_EMAIL and ADMIN_PASSWORD (the account created with npm run create-admin).');
+    process.exit(1);
+  }
+  console.log(`=== Verdict Beach backend checks: ${API} ===\n`);
+
+  // Health
+  const health = await call('GET', `${API}/health`);
+  check('API is reachable', health.status === 200 || health.status === 503, `status ${health.status}`);
+  check('Database is connected', health.status === 200, 'health reports database unavailable');
+
+  // Public registration is closed
+  const reg = await call('POST', `${API}/auth/register`, {
+    json: { name: 'Intruder Test', email: `intruder${Date.now()}@example.com`, password: 'a-long-password-123' },
+  });
+  check('Public registration is refused', reg.status === 401, `status ${reg.status}`);
+
+  // Login
+  const badLogin = await call('POST', `${API}/auth/login`, { json: { email: ADMIN_EMAIL, password: 'wrong-password-123' } });
+  check('Wrong password is rejected', badLogin.status === 401, `status ${badLogin.status}`);
+
+  const login = await call('POST', `${API}/auth/login`, { json: { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } });
+  const token = login.data?.data?.token;
+  check('Admin login returns a token', login.status === 200 && !!token, `status ${login.status}`);
+
+  // Protected routes
+  const me = await call('GET', `${API}/auth/me`, { token });
+  check('GET /auth/me works with a token', me.status === 200, `status ${me.status}`);
+  const anonList = await call('GET', `${API}/enquiries`);
+  check('GET /enquiries needs a token', anonList.status === 401, `status ${anonList.status}`);
+  const forged = await call('GET', `${API}/enquiries`, { token: 'not.a.real.token' });
+  check('A forged token is rejected', forged.status === 401, `status ${forged.status}`);
+  const list = await call('GET', `${API}/enquiries?page=1&limit=5`, { token });
+  check('GET /enquiries works with a token', list.status === 200, `status ${list.status}`);
+
+  // Public enquiry validation and spam protection
+  const invalid = await call('POST', `${API}/enquiries`, { json: { name: 'A' } });
+  check('Invalid enquiry returns field errors', invalid.status === 400 && Array.isArray(invalid.data?.errors), `status ${invalid.status}`);
+
+  const honeypot = await call('POST', `${API}/enquiries`, { json: validEnquiry({ website: 'http://spam.example' }) });
+  check('Honeypot submission gets a fake success and stores nothing', honeypot.status === 201 && honeypot.data?.data?.id === null, `status ${honeypot.status}`);
+
+  // Real enquiry with an attachment (triggers the confirmation email)
+  const tmp = path.join(os.tmpdir(), `vb-test-${Date.now()}.txt`);
+  fs.writeFileSync(tmp, 'Test attachment for the Verdict Beach verification suite.');
+  const form = new FormData();
+  for (const [key, value] of Object.entries(validEnquiry())) form.append(key, value);
+  form.append('attachments', new Blob([fs.readFileSync(tmp)], { type: 'text/plain' }), 'test-attachment.txt');
+  const created = await call('POST', `${API}/enquiries`, { form });
+  fs.unlinkSync(tmp);
+  const id = created.data?.data?.id;
+  check('Enquiry with attachment is accepted', created.status === 201 && !!id, `status ${created.status}, ${created.data?.message}`);
+
+  if (id) {
+    const anon = await call('GET', `${API}/enquiries/${id}/attachments/0`);
+    check('Attachment download is refused without a token', anon.status === 401, `status ${anon.status}`);
+
+    const staff = await fetch(`${API}/enquiries/${id}/attachments/0`, { headers: { Authorization: `Bearer ${token}` } });
+    const text = await staff.text();
+    check('Attachment download works with a token', staff.status === 200 && text.includes('Test attachment'), `status ${staff.status}`);
+  }
+
+  const publicFile = await fetch(`${ORIGIN}/uploads/documents/anything.txt`);
+  check('Uploaded documents are not publicly served', publicFile.status === 404, `status ${publicFile.status}`);
+
+  console.log(`\nResult: ${passed} passed, ${failed} failed`);
+  console.log(`Confirmation email: check ${TEST_EMAIL_TO} and the team inbox. Server logs show "[Mail]" lines if SMTP is skipped or failing.`);
+  process.exit(failed ? 1 : 0);
+}
+
+main().catch((err) => {
+  console.error('Test suite could not run. Is the server running?', err.message);
   process.exit(1);
 });

@@ -29,6 +29,8 @@ router.get('/stats', EnquiryController.getEnquiryStats);
 // Collection listing route
 router.get('/', validate(listEnquiriesSchema), EnquiryController.listEnquiries);
 
+router.get('/:id/attachments/:index', EnquiryController.downloadAttachment);
+
 // Item routes
 router
   .route('/:id')

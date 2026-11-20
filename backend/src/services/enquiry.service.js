@@ -2,6 +2,9 @@ import { Enquiry } from '../models/enquiry.model.js';
 import { ApiError } from '../utils/apiError.js';
 import { EmailService } from './email.service.js';
 
+// Escape user input before building a RegExp so it is matched literally.
+const escapeRegex = (text = '') => String(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export class EnquiryService {
   /**
    * Create a new consultation enquiry
@@ -13,11 +16,13 @@ export class EnquiryService {
       userAgent: metadata.userAgent || '',
     });
 
-    // Fire non-blocking notifications asynchronously
+    // Notifications run after the response is sent; failures are logged, never returned to the visitor.
+    const reference = String(enquiry._id).slice(-8).toUpperCase();
     EmailService.sendEnquiryConfirmation({
       to: enquiry.email,
       name: enquiry.name,
       service: enquiry.service,
+      reference,
     }).catch((err) => console.error('[EnquiryService] Confirmation email error:', err.message));
 
     EmailService.sendAdminNotification(enquiry).catch((err) =>
@@ -40,21 +45,22 @@ export class EnquiryService {
     sortOrder = 'desc',
   }) {
     const query = {};
+    const pattern = search ? escapeRegex(search) : '';
 
     if (status) {
       query.status = status;
     }
 
     if (service) {
-      query.service = new RegExp(service, 'i');
+      query.service = { $regex: escapeRegex(service), $options: 'i' };
     }
 
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { companyName: { $regex: search, $options: 'i' } },
-        { message: { $regex: search, $options: 'i' } },
+        { name: { $regex: pattern, $options: 'i' } },
+        { email: { $regex: pattern, $options: 'i' } },
+        { companyName: { $regex: pattern, $options: 'i' } },
+        { message: { $regex: pattern, $options: 'i' } },
       ];
     }
 

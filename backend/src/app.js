@@ -3,89 +3,72 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { env } from './config/env.js';
 import apiRoutes from './routes/index.js';
 import { notFound } from './middlewares/notFound.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 
-// Security HTTP headers
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-  })
-);
+// Behind a reverse proxy (Render, Railway, Nginx), trust the first hop for client IPs.
+app.set('trust proxy', 1);
 
-// CORS configuration
+app.use(helmet());
+
 const allowedOrigins = [
   env.CLIENT_URL,
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:3000',
+  ...(env.isDevelopment ? ['http://localhost:5173', 'http://127.0.0.1:5173'] : []),
 ].filter(Boolean);
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, postman)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1 || env.isDevelopment) {
-        return callback(null, true);
-      }
-      return callback(new Error('CORS policy: Not allowed by CORS'));
+      // Requests without an Origin header (curl, server-to-server) are allowed.
+      if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(null, false);
     },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
 
-// HTTP request logger
 app.use(morgan(env.isProduction ? 'combined' : 'dev'));
 
-// Static files for document uploads
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
+// Body limits are small: enquiry text is capped at 5000 chars and files go via multipart.
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '100kb' }));
 
-// Body parsing
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// Rate limiting (protect auth endpoints from brute force)
+// Brute-force protection on login.
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
-  standardHeaders: true,
+  limit: 10,
+  standardHeaders: 'draft-7',
   legacyHeaders: false,
-  message: { success: false, statusCode: 429, message: 'Too many attempts. Please try again later.' },
+  message: { success: false, statusCode: 429, message: 'Too many login attempts. Please try again later.' },
 });
 app.use('/api/auth/login', loginLimiter);
 
-// Trust proxy for secure cookies / IP detection behind proxies
-app.set('trust proxy', 1);
+// Spam protection on the public enquiry form.
+const enquiryLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: {
+    success: false,
+    statusCode: 429,
+    message: 'Too many enquiries from this connection. Please try again later or contact us directly.',
+  },
+});
+app.use('/api/enquiries', (req, res, next) => (req.method === 'POST' ? enquiryLimiter(req, res, next) : next()));
 
-// Root route
 app.get('/', (req, res) => {
-  res.status(200).json({
-    name: 'Verdict Beach API',
-    version: '1.0.0',
-    status: 'online',
-    documentation: '/api/health',
-  });
+  res.status(200).json({ name: 'Verdict Beach API', version: '1.0.0', status: 'online', documentation: '/api/health' });
 });
 
-// API Routes
 app.use('/api', apiRoutes);
 
-// Catch 404
 app.use(notFound);
-
-// Centralized error handler
 app.use(errorHandler);
 
 export default app;

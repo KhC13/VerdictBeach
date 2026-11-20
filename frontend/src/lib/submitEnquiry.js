@@ -1,50 +1,37 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 /**
- * Submits enquiry to the Verdict Beach backend API.
- * Supports both JSON payloads and multipart file attachments.
- * Resolves with the created enquiry data on success, throws on failure.
+ * Sends an enquiry to the Verdict Beach API (JSON, or multipart when files are attached).
+ * Resolves with { id } on success. On failure throws an Error with `fieldErrors`
+ * (field name -> message) so the form can show each message beside its field.
  */
 export async function submitEnquiry(values) {
+  const { files = [], ...fields } = values;
   let response;
 
-  const hasFiles = Array.isArray(values.files) && values.files.length > 0;
-
-  if (hasFiles) {
+  if (files.length > 0) {
     const formData = new FormData();
-    Object.entries(values).forEach(([key, val]) => {
-      if (key !== 'files' && val !== undefined && val !== null) {
-        formData.append(key, val);
-      }
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) formData.append(key, value);
     });
-
-    values.files.forEach((file) => {
-      formData.append('attachments', file);
-    });
-
-    response = await fetch(`${API_BASE_URL}/enquiries`, {
-      method: 'POST',
-      body: formData,
-    });
+    files.forEach((file) => formData.append('attachments', file));
+    response = await fetch(`${API_BASE_URL}/enquiries`, { method: 'POST', body: formData });
   } else {
-    const { files, ...jsonValues } = values;
     response = await fetch(`${API_BASE_URL}/enquiries`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(jsonValues),
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields),
     });
   }
 
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const message = data?.message || 'Failed to submit enquiry';
-    const error = new Error(message);
-    error.errors = data?.errors || [];
+    const error = new Error(data?.message || 'We could not send your enquiry. Please try again.');
+    error.status = response.status;
+    error.fieldErrors = Object.fromEntries((data?.errors || []).filter((e) => e.field).map((e) => [e.field, e.message]));
     throw error;
   }
 
-  return { ok: true, data: data.data };
+  return data.data; // { id }
 }

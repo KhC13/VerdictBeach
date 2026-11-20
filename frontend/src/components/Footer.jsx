@@ -8,9 +8,6 @@ import { company } from '../config/company';
 
 export default function Footer() {
   const { contact } = company;
-  const tag = !contact.verified && (
-    <span className="ml-2 rounded-full border border-gold/40 px-2 py-0.5 text-[9px] uppercase tracking-widest text-gold">Placeholder</span>
-  );
 
   return (
     <footer className="relative overflow-hidden bg-navy text-ivory/75">
@@ -62,15 +59,15 @@ export default function Footer() {
           <Reveal className="lg:col-span-3">
             <h3 className="font-sans text-[11px] font-medium uppercase tracking-[0.28em] !text-gold">Contact</h3>
             <ul className="mt-5 space-y-3 text-sm">
-              <li className="break-words">
-                {contact.verified ? <a href={`mailto:${contact.email}`} className="hover:text-gold-300">{contact.email}</a> : contact.email}
-                {tag}
-              </li>
-              <li>
-                {contact.verified ? <a href={`tel:${contact.phone}`} className="hover:text-gold-300">{contact.phone}</a> : contact.phone}
-                {tag}
-              </li>
-              <li>{contact.address}</li>
+              {contact.verified ? (
+                <>
+                  {contact.email && <li className="break-words"><a href={`mailto:${contact.email}`} className="hover:text-gold-300">{contact.email}</a></li>}
+                  {contact.phone && <li><a href={`tel:${contact.phone.replace(/\s/g, '')}`} className="hover:text-gold-300">{contact.phone}</a></li>}
+                  {contact.address && <li>{contact.address}</li>}
+                </>
+              ) : (
+                <li><Link to="/contact" className="hover:text-gold-300">Send us an enquiry</Link></li>
+              )}
             </ul>
           </Reveal>
         </div>
@@ -78,7 +75,7 @@ export default function Footer() {
         <div className="mt-16 flex flex-col gap-4 border-t border-ivory/10 pt-8 text-xs sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1.5">
             <p>© {new Date().getFullYear()} Verdict Beach · A {company.parent} vertical.</p>
-            <p className="max-w-xl text-ivory/50">
+            <p className="max-w-xl text-ivory/70">
               Information on this website is general in nature and does not constitute legal advice.
             </p>
           </div>
